@@ -1,0 +1,102 @@
+{
+  "_comment": "Ocelot Static Configuration - Uses hardcoded DownstreamHostAndPorts for routing",
+  "_usage": "This config is loaded when UseEureka=false. Gateway routes to explicit service instances.",
+
+  "Routes": [
+    {
+      "_comment": "Route: All auth operations - Login, validate, user lookup",
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+    },
+    {
+      "_comment": "Route: All leave operations - Apply, approve, reject, cancel, history",
+      "DownstreamPathTemplate": "/api/leave/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "leave-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/leave/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+    },
+    {
+      "_comment": "Route: All notification operations with path parameters",
+      "DownstreamPathTemplate": "/api/notifications/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notification-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notifications/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+    },
+    {
+      "_comment": "Route: GET all notifications (no path parameters)",
+      "DownstreamPathTemplate": "/api/notifications",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notification-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notifications",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "_comment": "Route: Health check - Auth Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/health/auth",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "_comment": "Route: Health check - Leave Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "leave-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/health/leave",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "_comment": "Route: Health check - Notification Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notification-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/health/notification",
+      "UpstreamHttpMethod": [ "GET" ]
+    }
+  ],
+  "GlobalConfiguration": {
+    "_comment": "Global settings applied to all routes",
+    "BaseUrl": "http://localhost:5000"
+  }
+}

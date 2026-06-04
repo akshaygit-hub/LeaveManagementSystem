@@ -1,0 +1,248 @@
+services:
+  # ==============================================
+  # Eureka Server - Service Discovery
+  # ==============================================
+  eureka:
+    image: steeltoeoss/eureka-server:latest
+    container_name: lms-eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=eureka
+    networks:
+      - lms-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: lms-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - lms-network
+
+
+  # ==============================================
+  # Jaeger - Distributed Tracing
+  # ==============================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: lms-jaeger
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=info
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auth Service - Instance 1
+  auth-service:
+    container_name: lms-auth-service-1
+    build:
+      context: .
+      dockerfile: src/AuthService/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - Eureka__Instance__AppName=AUTH-SERVICE
+      - Eureka__Instance__PreferIpAddress=true
+      - Eureka__Instance__Port=8080
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+  # Auth Service - Instance 2 (for demonstrating Eureka load balancing)
+  auth-service-2:
+    container_name: lms-auth-service-2
+    build:
+      context: .
+      dockerfile: src/AuthService/Dockerfile
+    ports:
+      - "5011:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - Eureka__Instance__AppName=AUTH-SERVICE
+      - Eureka__Instance__PreferIpAddress=true
+      - Eureka__Instance__Port=8080
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+  # Leave Service - Instance 1
+  leave-service:
+    container_name: lms-leave-service-1
+    build:
+      context: .
+      dockerfile: src/LeaveService/Dockerfile
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__MessageTtlMilliseconds=86400000
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - Eureka__Instance__AppName=LEAVE-SERVICE
+      - Eureka__Instance__PreferIpAddress=true
+      - Eureka__Instance__Port=8080
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+  # Leave Service - Instance 2 (for demonstrating Eureka load balancing)
+  leave-service-2:
+    container_name: lms-leave-service-2
+    build:
+      context: .
+      dockerfile: src/LeaveService/Dockerfile
+    ports:
+      - "5012:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__MessageTtlMilliseconds=86400000
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - Eureka__Instance__AppName=LEAVE-SERVICE
+      - Eureka__Instance__PreferIpAddress=true
+      - Eureka__Instance__Port=8080
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+  # Notification Service
+  notification-service:
+    container_name: lms-notification-service
+    build:
+      context: .
+      dockerfile: src/NotificationService/Dockerfile
+    ports:
+      - "5003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__MessageTtlMilliseconds=86400000
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - Eureka__Instance__AppName=NOTIFICATION-SERVICE
+      - Eureka__Instance__PreferIpAddress=true
+      - Eureka__Instance__Port=8080
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+  # API Gateway
+  api-gateway:
+    container_name: lms-api-gateway
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - UseEureka=true
+      - Eureka__Client__ServiceUrl=http://eureka:8761/eureka/
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    depends_on:
+      eureka:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      auth-service-2:
+        condition: service_started
+      leave-service:
+        condition: service_started
+      leave-service-2:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      jaeger:
+        condition: service_started
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge

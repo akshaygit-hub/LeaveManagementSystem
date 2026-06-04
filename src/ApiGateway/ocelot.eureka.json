@@ -1,0 +1,98 @@
+{
+  "_comment": "Ocelot Eureka Configuration - Uses ServiceName for dynamic service discovery",
+  "_usage": "This config is loaded when UseEureka=true. Gateway queries Eureka for service instances.",
+  "_benefit": "Automatic load balancing, failover, and no manual host configuration needed",
+  "_caseNote": "ServiceName must match Eureka registration. Eureka normalizes all names to UPPERCASE internally.",
+
+  "Routes": [
+    {
+      "_comment": "Route: All auth operations - Login, validate, user lookup",
+      "_discovery": "ServiceName AUTH-SERVICE resolves to all registered instances via Eureka",
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamScheme": "http",
+      "ServiceName": "AUTH-SERVICE",
+      "UpstreamPathTemplate": "/api/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: All leave operations - Apply, approve, reject, cancel, history",
+      "_discovery": "ServiceName LEAVE-SERVICE resolves to all registered instances via Eureka",
+      "DownstreamPathTemplate": "/api/leave/{everything}",
+      "DownstreamScheme": "http",
+      "ServiceName": "LEAVE-SERVICE",
+      "UpstreamPathTemplate": "/api/leave/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: All notification operations with path parameters",
+      "_discovery": "ServiceName NOTIFICATION-SERVICE resolves to all registered instances via Eureka",
+      "DownstreamPathTemplate": "/api/notifications/{everything}",
+      "DownstreamScheme": "http",
+      "ServiceName": "NOTIFICATION-SERVICE",
+      "UpstreamPathTemplate": "/api/notifications/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: GET all notifications (no path parameters)",
+      "DownstreamPathTemplate": "/api/notifications",
+      "DownstreamScheme": "http",
+      "ServiceName": "NOTIFICATION-SERVICE",
+      "UpstreamPathTemplate": "/api/notifications",
+      "UpstreamHttpMethod": [ "GET" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: Health check - Auth Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "ServiceName": "AUTH-SERVICE",
+      "UpstreamPathTemplate": "/api/health/auth",
+      "UpstreamHttpMethod": [ "GET" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: Health check - Leave Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "ServiceName": "LEAVE-SERVICE",
+      "UpstreamPathTemplate": "/api/health/leave",
+      "UpstreamHttpMethod": [ "GET" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "_comment": "Route: Health check - Notification Service",
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "ServiceName": "NOTIFICATION-SERVICE",
+      "UpstreamPathTemplate": "/api/health/notification",
+      "UpstreamHttpMethod": [ "GET" ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    }
+  ],
+  "GlobalConfiguration": {
+    "_comment": "Global settings applied to all routes",
+    "BaseUrl": "http://localhost:5000",
+    "ServiceDiscoveryProvider": {
+      "_comment": "Tells Ocelot to use Eureka for service discovery instead of static hosts",
+      "_requirement": "Eureka server must be running and AddEureka() must be called in Program.cs",
+      "Type": "Eureka"
+    }
+  }
+}
